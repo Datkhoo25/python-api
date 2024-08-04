@@ -1,12 +1,14 @@
 from flask import Flask, jsonify, request
 from flask_restful import Api, Resource
 from flasgger import Swagger
-
 import book_review
 
 app = Flask(__name__)
 api = Api(app)
 swagger = Swagger(app)
+
+br= book_review.Book_review()
+
 
 class UppercaseText(Resource):
     def get(self):
@@ -37,51 +39,66 @@ class UppercaseText(Resource):
 
         return jsonify({"text": text.upper()})
     
-class Records(Resource):
+class AllReviews(Resource):
     def get(self):
         """
-        This method responds to the GET request for returning a number of books.
+        This method responds to the GET request for the list of book reviews.
         ---
         tags:
-        - Records
+        - Book Reviews Here
         parameters:
-            - name: count
-              in: query
-              type: integer
-              required: false
-              description: The number of books to return
             - name: sort
               in: query
               type: string
-              enum: ['ASC', 'DESC']
+              enum: [ASC, DESC]
               required: false
-              description: Sort order for the books
+              description: Sort order for reviews (ASC or DESC)
+            - name: max_records
+              in: query
+              type: integer
+              required: false
+              description: Maximum number of records to return
         responses:
             200:
                 description: A successful GET request
-                schema:
-                    type: object
-                    properties:
-                        books:
-                            type: array
-                            items:
-                                type: object
-                                properties:
-                                    title:
-                                        type: string
-                                        description: The title of the book
-                                    author:
-                                        type: string
-                                        description: The author of the book
+                content:
+                    application/json:
+                      schema:
+                        type: array
+                        items:
+                            type: object
+                            properties:
+                                title:
+                                    type: string
+                                    description: The title of the book
+                                review:
+                                    type: string
+                                    description: The review of the book
+                                rating:
+                                    type: integer
+                                    description: The rating of the book
         """
+        sort = request.args.get('sort', default=None)
+        max_records = int(request.args.get('max_records', default=10))
 
-        count = request.args.get('count')  # Default to returning 10 books if count is not provided
-        sort = request.args.get('sort')
+        # Check for valid sort parameter
+        if sort and sort.lower() not in ["asc", "desc"]:
+            return {"error": "Invalid sort value"}, 400
 
-        # Get all the books
-        books = book_review.get_all_records(count=count, sort=sort)
+        # Sort the book reviews if sort parameter is provided
+        if sort =="ASC":
+            book_review = br.get_book_rating(sort=sort, max_records=max_records)
+        elif sort =="DESC":
+            book_review = br.get_book_rating(sort=sort, max_records=max_records)
+        else: 
+            book_review = br.get_book_rating(max_records=max_records)
 
-        return {"books": books}, 200
+
+        return book_reviews, 200
+
+
+
+
     
 class AddRecord(Resource):
     def post(self):
@@ -98,39 +115,47 @@ class AddRecord(Resource):
                 id: BookReview
                 required:
                   - Book
-                  - Rating
+                  - Book_rating
                 properties:
                   Book:
                     type: string
                     description: the name of the book
-                  Rating:
+                  Book_rating:
                     type: integer
                     description: the rating of the book (1-10)
+                  Notes:
+                    type: string
+                    description: optional notes about the book
         responses:
             200:
                 description: A successful POST request
             400: 
-                description: Bad request, missing 'Book' or 'Rating' in the request body
+                description: Bad request, missing 'Book' or 'Book_rating' in the request body
         """
 
         data = request.json
         print(data)
 
-        # Check if 'Book' and 'Rating' are present in the request body
-        if 'Book' not in data or 'Rating' not in data:
-            return {"message": "Bad request, missing 'Book' or 'Rating' in the request body"}, 400
-        # Call the add_record function to add the record to the DB table
-        success = book_review.add_record(data)
+        # Check if 'Book' and 'Book_rating' are present in the request body
+        if 'Book' not in data or 'Book_rating' not in data:
+            return {"message": "Bad request, missing 'Book' or 'Book_rating' in the request body"}, 400
+        
+        # Extract fields from request data
+        book = data['Book']
+        book_rating = data['Book_rating']
+        notes = data.get('Notes', '')  # Optional field with default value ''
+
+        # Call the add_book_rating function to add the record to the DB table
+        success = br.add_book_rating(book, book_rating, notes)
 
         if success:
             return {"message": "Record added successfully"}, 200
         else:
-            return {"message": "Failed to add record"}, 500
-        
+            return {"message": "Failed to add record. Alamak!"}, 500
 
 
+api.add_resource(AllReviews, "/all_reviews")
 api.add_resource(AddRecord, "/add-record")
-api.add_resource(Records, "/records")
 api.add_resource(UppercaseText, "/uppercase")
 
 if __name__ == "__main__":

@@ -1,16 +1,19 @@
 from flask import Flask, jsonify, request
 from flask_restful import Api, Resource
 from flasgger import Swagger
+import book_review
 
 app = Flask(__name__)
 api = Api(app)
 swagger = Swagger(app)
 
-class UppercaseText(Resource):
+br= book_review.Book_review()
 
+
+class UppercaseText(Resource):
     def get(self):
         """
-        This method responds to the GET request for this endpoint and returns the data in uppercase, yes.
+        This method responds to the GET request for this endpoint and returns the data in uppercase.
         ---
         tags:
         - Text Processing
@@ -34,60 +37,126 @@ class UppercaseText(Resource):
         """
         text = request.args.get('text')
 
-        return {"text": text.upper()}, 200
-
-class TextManipulation(Resource):
-
+        return jsonify({"text": text.upper()})
+    
+class AllReviews(Resource):
     def get(self):
         """
-        This method responds to the GET request for text manipulation.
+        This method responds to the GET request for the list of book reviews.
         ---
         tags:
-        - Text Processing
+        - Book Reviews Here
         parameters:
-            - name: text
+            - name: sort
               in: query
               type: string
-              required: true
-              description: The text to be manipulated
-            - name: duplication_factor
+              enum: [ASC, DESC]
+              required: false
+              description: Sort order for reviews (ASC or DESC)
+            - name: max_records
               in: query
               type: integer
               required: false
-              description: Number of times to repeat the text
-            - name: capitalization
-              in: query
-              type: string
-              enum: [UPPER, LOWER, None]
-              required: false
-              description: Capitalization option (UPPER, LOWER, or None)
+              description: Maximum number of records to return
         responses:
             200:
                 description: A successful GET request
                 content:
                     application/json:
                       schema:
-                        type: object
-                        properties:
-                            manipulated_text:
-                                type: string
-                                description: The manipulated text
+                        type: array
+                        items:
+                            type: object
+                            properties:
+                                title:
+                                    type: string
+                                    description: The title of the book
+                                review:
+                                    type: string
+                                    description: The review of the book
+                                rating:
+                                    type: integer
+                                    description: The rating of the book
         """
-        text = request.args.get('text')
-        duplication_factor = int(request.args.get('duplication_factor', 1))
-        capitalization = request.args.get('capitalization', 'None')
+        sort = request.args.get('sort', default=None)
+        max_records = int(request.args.get('max_records', default=10))
 
-        # Manipulate the text based on duplication factor and capitalization
-        manipulated_text = text * duplication_factor
-        if capitalization == 'UPPER':
-            manipulated_text = manipulated_text.upper()
-        elif capitalization == 'LOWER':
-            manipulated_text = manipulated_text.lower()
+        # Check for valid sort parameter
+        if sort and sort.lower() not in ["asc", "desc"]:
+            return {"error": "Invalid sort value"}, 400
 
-        return {"manipulated_text": manipulated_text}
+        # Sort the book reviews if sort parameter is provided
+        if sort =="ASC":
+            book_review = br.get_book_rating(sort=sort, max_records=max_records)
+        elif sort =="DESC":
+            book_review = br.get_book_rating(sort=sort, max_records=max_records)
+        else: 
+            book_review = br.get_book_rating(max_records=max_records)
 
-api.add_resource(TextManipulation, "/manipulate") # "/manipulate" is the extention
-api.add_resource(UppercaseText, "/uppercase")  #"/uppercase" is the extention
+
+        return book_reviews, 200
+
+
+
+
+    
+class AddRecord(Resource):
+    def post(self):
+        """
+        This method responds to the POST request for adding a new record to the DB table.
+        ---
+        tags:
+        - Records
+        parameters:
+            - in: body
+              name: body
+              required: true
+              schema:
+                id: BookReview
+                required:
+                  - Book
+                  - Book_rating
+                properties:
+                  Book:
+                    type: string
+                    description: the name of the book
+                  Book_rating:
+                    type: integer
+                    description: the rating of the book (1-10)
+                  Notes:
+                    type: string
+                    description: optional notes about the book
+        responses:
+            200:
+                description: A successful POST request
+            400: 
+                description: Bad request, missing 'Book' or 'Book_rating' in the request body
+        """
+
+        data = request.json
+        print(data)
+
+        # Check if 'Book' and 'Book_rating' are present in the request body
+        if 'Book' not in data or 'Book_rating' not in data:
+            return {"message": "Bad request, missing 'Book' or 'Book_rating' in the request body"}, 400
+        
+        # Extract fields from request data
+        book = data['Book']
+        book_rating = data['Book_rating']
+        notes = data.get('Notes', '')  # Optional field with default value ''
+
+        # Call the add_book_rating function to add the record to the DB table
+        success = br.add_book_rating(book, book_rating, notes)
+
+        if success:
+            return {"message": "Record added successfully"}, 200
+        else:
+            return {"message": "Failed to add record. Alamak!"}, 500
+
+
+api.add_resource(AllReviews, "/all_reviews")
+api.add_resource(AddRecord, "/add-record")
+api.add_resource(UppercaseText, "/uppercase")
 
 if __name__ == "__main__":
     app.run(debug=True)
