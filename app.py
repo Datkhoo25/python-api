@@ -145,7 +145,7 @@ class AddRecord(Resource):
             return {"error": "Reuest body must be in json format"}, 400
         
         # Extract fields from request data
-        book = data.get('book')  # Corrected to use parentheses
+        book = data.get('book')  # Corrected to use parentheses. # Must be a ( ) instead of a []
         review = data.get('rating')  # Corrected to use parentheses
         notes = data.get('notes', '')  # Optional field with default value ''
 
