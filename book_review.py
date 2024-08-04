@@ -1,12 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import os 
 from pyairtable import Api
 
+
+
+# In[ ]:
+
+
+print(os.environ.get('AIRTABLE_TOKEN'))
 
 
 # In[8]:
@@ -15,7 +21,7 @@ from pyairtable import Api
 class Book_review:
     def __init__(self):
         self.API_key = Api(os.environ.get('AIRTABLE_TOKEN'))
-        self.table = self.API_key.table('appjag3LK8KoSbJv8', 'tbl4GIvGTPlSpq2DD')
+        self.table = self.API_key.table('appuxTXD1DJAMZ9lP', 'tbl7MLun8q8cqt6N5')
 
     def get_book_rating (self, sort="ASC", max_records=10):
         if not sort:

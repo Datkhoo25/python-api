@@ -68,15 +68,15 @@ class AllReviews(Resource):
                         items:
                             type: object
                             properties:
-                                title:
+                                book_title:
                                     type: string
                                     description: The title of the book
-                                review:
-                                    type: string
-                                    description: The review of the book
                                 rating:
                                     type: integer
                                     description: The rating of the book
+                                book_notes:
+                                    type: string
+                                    description: The review of the book
         """
         sort = request.args.get('sort', default=None)
         max_records = int(request.args.get('max_records', default=10))
@@ -87,14 +87,18 @@ class AllReviews(Resource):
 
         # Sort the book reviews if sort parameter is provided
         if sort =="ASC":
+            print(sort)
+            print(max_records)
             book_review = br.get_book_rating(sort=sort, max_records=max_records)
         elif sort =="DESC":
+            print(sort)
+            print(max_records)
             book_review = br.get_book_rating(sort=sort, max_records=max_records)
         else: 
             book_review = br.get_book_rating(max_records=max_records)
 
 
-        return book_reviews, 200
+        return book_review, 200
 
 
 
@@ -106,7 +110,7 @@ class AddRecord(Resource):
         This method responds to the POST request for adding a new record to the DB table.
         ---
         tags:
-        - Records
+        - Book Reviews
         parameters:
             - in: body
               name: body
@@ -114,16 +118,16 @@ class AddRecord(Resource):
               schema:
                 id: BookReview
                 required:
-                  - Book
-                  - Book_rating
+                  - book
+                  - rating
                 properties:
-                  Book:
+                  book:
                     type: string
                     description: the name of the book
-                  Book_rating:
+                  rating:
                     type: integer
                     description: the rating of the book (1-10)
-                  Notes:
+                  notes:
                     type: string
                     description: optional notes about the book
         responses:
@@ -137,21 +141,22 @@ class AddRecord(Resource):
         print(data)
 
         # Check if 'Book' and 'Book_rating' are present in the request body
-        if 'Book' not in data or 'Book_rating' not in data:
-            return {"message": "Bad request, missing 'Book' or 'Book_rating' in the request body"}, 400
+        if not data:
+            return {"error": "Reuest body must be in json format"}, 400
         
         # Extract fields from request data
-        book = data['Book']
-        book_rating = data['Book_rating']
-        notes = data.get('Notes', '')  # Optional field with default value ''
+        book = data.get('book')  # Corrected to use parentheses
+        review = data.get('rating')  # Corrected to use parentheses
+        notes = data.get('notes', '')  # Optional field with default value ''
 
+        if not book or not review:
+            return {"error": "Both 'book' and 'rating' are required fields"}, 400
+        
         # Call the add_book_rating function to add the record to the DB table
-        success = br.add_book_rating(book, book_rating, notes)
+        br.add_book_rating(book, review, notes)
 
-        if success:
-            return {"message": "Record added successfully"}, 200
-        else:
-            return {"message": "Failed to add record. Alamak!"}, 500
+        return {"message": "Record added successfully"}, 200
+
 
 
 api.add_resource(AllReviews, "/all_reviews")
