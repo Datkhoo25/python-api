@@ -34,7 +34,7 @@ class UppercaseText(Resource):
         """
         text = request.args.get('text')
 
-        return {"text": text.upper()}, 200
+        return jsonify({"text": text.upper()})
 
 class TextManipulation(Resource):
 
@@ -84,7 +84,7 @@ class TextManipulation(Resource):
         elif capitalization == 'LOWER':
             manipulated_text = manipulated_text.lower()
 
-        return {"manipulated_text": manipulated_text}
+        return jsonify({"manipulated_text": manipulated_text})
 
 api.add_resource(TextManipulation, "/manipulate") # "/manipulate" is the extention
 api.add_resource(UppercaseText, "/uppercase")  #"/uppercase" is the extention
